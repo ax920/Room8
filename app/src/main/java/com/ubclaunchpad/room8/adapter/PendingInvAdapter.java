@@ -6,34 +6,65 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 import com.ubclaunchpad.room8.R;
+import com.ubclaunchpad.room8.Room8Utility.FirebaseEndpoint;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static com.ubclaunchpad.room8.Room8Utility.UserStatus.IN_GROUP;
+import static com.ubclaunchpad.room8.UserService.updateUserGroup;
+import static com.ubclaunchpad.room8.UserService.updateUserStatus;
+
 public class PendingInvAdapter extends
     RecyclerView.Adapter<PendingInvAdapter.ViewHolder> {
     // Store a member variable for the invites
     private List<String> mPendingInvites;
-
+    private Map<String,String> mPendingInvitesMap;
+    private DatabaseReference mDatabase;
+    FirebaseAuth mAuth;
+    private String groupName;
     // Pass in the contact array into the constructor
     public PendingInvAdapter(Map<String,String> pendingInvites) {
         mPendingInvites = new ArrayList<String>(pendingInvites.values());
+        mPendingInvitesMap = pendingInvites;
+        mDatabase = FirebaseDatabase.getInstance().getReference();
+        mAuth = FirebaseAuth.getInstance();
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
         public TextView groupNameTextView;
-
+        public Button acceptInviteButton;
         // We create a constructor that accepts the entire item row
         // and does the view lookups to find each subview
         public ViewHolder(View itemView) {
             // Stores the itemView in a public final member variable that can be used
             // to access the context from any ViewHolder instance
             super(itemView);
+            acceptInviteButton = (Button) itemView.findViewById(R.id.accept_button);
+            acceptInviteButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    String uid = mAuth.getCurrentUser().getUid();
+                    updateUserGroup(mDatabase, uid, groupName);
+                    updateUserStatus(mDatabase, uid, IN_GROUP);
 
+                    //remove invite from user's recyclerView
+                    mPendingInvites.remove(groupName);
+                    //add user UserUIds of a group
+                    DatabaseReference groupsRef = mDatabase.child(FirebaseEndpoint.GROUPS).child(groupName);
+                    groupsRef.child("UserUIds").setValue(uid);
+                    //remove invite from user's pendingInvites data
+                    mPendingInvitesMap.remove(uid);
+                }
+            });
             groupNameTextView = (TextView) itemView.findViewById(R.id.group_name);
         }
     }
@@ -56,7 +87,7 @@ public class PendingInvAdapter extends
     @Override
     public void onBindViewHolder(PendingInvAdapter.ViewHolder viewHolder, int position) {
         // Get the data model based on position
-        String groupName = mPendingInvites.get(position);
+        groupName = mPendingInvites.get(position);
 
         // Set item views based on your views and data model
         TextView textView = viewHolder.groupNameTextView;

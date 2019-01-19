@@ -123,8 +123,8 @@ public class CreateGroupViewInvitesActivity extends AppCompatActivity implements
         // Create the group
         DatabaseReference groupsRef = mDatabase.child(FirebaseEndpoint.GROUPS).child(groupName);
         Group newGroup = new Group(groupName);
-        newGroup.UserUIds.add(currUserUid);
         groupsRef.setValue(newGroup);
+        groupsRef.child("UserUIds").setValue(currUserUid);
 
         Intent intent = new Intent(this, SendInvitesActivity.class);
         intent.putExtra("name", groupName);
